@@ -6,10 +6,8 @@ import java.util.List;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugins.annotations.LifecyclePhase;
-import org.apache.maven.plugins.annotations.Mojo;
-import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.apache.maven.plugins.annotations.*;
+import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.Os;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.StreamConsumer;
@@ -23,6 +21,9 @@ import org.codehaus.plexus.util.cli.StreamPumper;
  */
 @Mojo(name = "create-ejb-stubs", defaultPhase = LifecyclePhase.GENERATE_SOURCES, requiresDependencyResolution = ResolutionScope.TEST)
 public class CreateEjbStubsMojo extends AbstractMojo {
+
+    @Component
+    private MavenProject mavenProject;
 
     /**
      * Location of the file.
@@ -45,17 +46,21 @@ public class CreateEjbStubsMojo extends AbstractMojo {
     @Parameter(required = true, readonly = true, property = "project.testClasspathElements")
     protected List<String> classpath;
 
+    @Parameter(defaultValue = "")
+    private String commandClasspath;
+
+
     public void execute() throws MojoExecutionException {
         if (websphereHome == null) {
             throw new MojoExecutionException(
                     "Missing <websphereHome> configuration");
         }
-        if (websphereHome.exists() == false) {
+        if (!websphereHome.exists()) {
             throw new MojoExecutionException(
                     "Directory specified in <websphereHome> '"
                     + websphereHome.getAbsolutePath() + "' not found");
         }
-        if (websphereHome.isDirectory() == false) {
+        if (!websphereHome.isDirectory()) {
             throw new MojoExecutionException(
                     "Value specified in <websphereHome> '"
                     + websphereHome.getAbsolutePath()
@@ -66,9 +71,9 @@ public class CreateEjbStubsMojo extends AbstractMojo {
             throw new MojoExecutionException("Output Directory cannot be null");
         }
 
-        if (outputDirectory.exists() == false) {
+        if (!outputDirectory.exists()) {
             boolean isDirMade = outputDirectory.mkdirs();
-            if (isDirMade == false) {
+            if (!isDirMade) {
                 throw new MojoExecutionException(String.format("Cannot create output directory '%s'", outputDirectory));
             }
         }
@@ -87,7 +92,11 @@ public class CreateEjbStubsMojo extends AbstractMojo {
         String[] command = new String[4];
         command[0] = new File(websphereHome, getExecutable()).getAbsolutePath();
         command[2] = "-cp";
-        command[3] = StringUtils.join(classpath.toArray(), File.pathSeparator);
+        if (commandClasspath != null && !commandClasspath.isEmpty()) {
+            command[3] = commandClasspath;
+        } else {
+            command[3] = StringUtils.join(classpath.toArray(), File.pathSeparator);
+        }
 
         for (String clazz : classes) {
             command[1] = clazz;
@@ -196,4 +205,5 @@ public class CreateEjbStubsMojo extends AbstractMojo {
             return "bin/createEJBStubs.sh";
         }
     }
+}
 }
