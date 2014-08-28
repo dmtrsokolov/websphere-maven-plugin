@@ -206,4 +206,4 @@ public class CreateEjbStubsMojo extends AbstractMojo {
         }
     }
 }
-}
+
